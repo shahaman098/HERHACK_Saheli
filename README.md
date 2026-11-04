@@ -51,6 +51,13 @@ standard (2024) covers **police-side** evidence only. Saheli attacks all three g
   re-verified server-side, and chained (`head = sha256(prevHead + chunkHash)`). The
   chain seals on resolution; the evidence page re-derives and re-verifies it on every
   read. A forged chunk is rejected with HTTP 409 — and that rejection is itself recorded.
+- **Measured, not claimed** — the landing page shows live metrics from the store:
+  median trigger→guardian-alert latency, false alarms absorbed at check-in,
+  escalations dispatched, audio chunks hash-chained. The evidence pack shows the
+  measured alert latency per incident.
+- **Responder-ready guardian view** — audible alarm on new escalations (WebAudio,
+  opt-in), turn-by-turn navigation deep link to the person's live location.
+- **Installable PWA** — manifest + icon; `Add to Home Screen` works on Android/Chrome.
 - **Privacy by default** — tracking and capture stop the moment an incident resolves;
   the API hard-rejects further events on sealed incidents.
 

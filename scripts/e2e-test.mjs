@@ -120,6 +120,17 @@ assert(manifest.chainValid === true, "evidence chain re-verified intact");
 assert(manifest.chunks.length === 2, "manifest lists both chunks");
 assert(manifest.locations.length >= 1, "location trail present");
 
+// --- 6. measured metrics ------------------------------------------------------
+const stats = await (await fetch(`${BASE}/api/stats`)).json();
+assert(stats.totalIncidents >= 1, "stats: incidents counted from live store");
+assert(stats.escalations >= 1, "stats: escalations counted");
+assert(
+  stats.escalations >= 1 && stats.medianEscalationLatencyMs !== null,
+  "stats: trigger→alert latency measured",
+);
+assert(stats.audioChunksChained >= 2, "stats: hash-chained audio chunks counted");
+assert(stats.falseAlarmsAbsorbed + stats.escalations >= 1, "stats: outcomes recorded");
+
 console.log(
   `\n${process.exitCode ? "SOME CHECKS FAILED" : "ALL CHECKS PASSED"} — finalHash ${manifest.finalHash?.slice(0, 16)}…`,
 );
