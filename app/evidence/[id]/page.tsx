@@ -79,6 +79,13 @@ export default function EvidencePage() {
   }
 
   const { manifest } = data;
+  const escalatedAt = manifest.timeline.find((e) => e.kind === "escalated")?.ts;
+  const escalationLatencyMs =
+    escalatedAt !== undefined ? escalatedAt - manifest.createdAt : null;
+  const lastLocation =
+    manifest.locations.length > 0
+      ? manifest.locations[manifest.locations.length - 1]
+      : null;
   const outcomeLabel =
     manifest.outcome === "resolved_safe"
       ? "Confirmed safe after escalation"
@@ -113,7 +120,20 @@ export default function EvidencePage() {
         <p className="mt-2 text-sm text-white/60">
           {outcomeLabel} · triggered by {manifest.trigger} ·{" "}
           {new Date(manifest.createdAt).toLocaleString()}
+          {escalationLatencyMs !== null
+            ? ` · guardian alerts ${(escalationLatencyMs / 1000).toFixed(1)}s after trigger`
+            : ""}
         </p>
+        {lastLocation ? (
+          <a
+            className="mt-2 inline-block text-sm text-sky-200 underline underline-offset-4"
+            target="_blank"
+            rel="noreferrer"
+            href={`https://www.google.com/maps?q=${lastLocation.lat},${lastLocation.lng}`}
+          >
+            Open last recorded location in Google Maps →
+          </a>
+        ) : null}
         {manifest.finalHash ? (
           <div className="mt-4 rounded-xl bg-black/30 p-4">
             <p className="text-xs uppercase tracking-wider text-white/40">Sealed evidence hash</p>

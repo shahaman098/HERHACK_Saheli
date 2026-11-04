@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { computeStats } from "@/lib/stats";
+
+// Metrics are read from the live store on every request — measured numbers,
+// not baked-in claims.
+export const dynamic = "force-dynamic";
 
 const STATS = [
   {
@@ -34,6 +39,12 @@ const STEPS = [
 ];
 
 export default function Home() {
+  const stats = computeStats();
+  const latency =
+    stats.medianEscalationLatencyMs === null
+      ? null
+      : `${(stats.medianEscalationLatencyMs / 1000).toFixed(1)}s`;
+
   return (
     <main className="mx-auto max-w-5xl px-6 pb-24 pt-16">
       {/* Hero */}
@@ -68,6 +79,37 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Measured prototype metrics (live from the store — staged scenarios) */}
+      {stats.totalIncidents > 0 ? (
+        <section className="mt-16">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
+            Measured on this build (staged scenarios, live store)
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="text-3xl font-semibold text-sky-200">{latency ?? "—"}</div>
+              <p className="mt-2 text-sm text-white/70">median trigger→guardian-alert latency</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="text-3xl font-semibold text-emerald-200">
+                {stats.falseAlarmsAbsorbed}
+              </div>
+              <p className="mt-2 text-sm text-white/70">false alarms absorbed at check-in</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="text-3xl font-semibold text-red-200">{stats.escalations}</div>
+              <p className="mt-2 text-sm text-white/70">escalations with guardian alerts</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="text-3xl font-semibold text-amber-200">
+                {stats.audioChunksChained}
+              </div>
+              <p className="mt-2 text-sm text-white/70">audio chunks hash-chained</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* Verified problem stats */}
       <section className="mt-16">

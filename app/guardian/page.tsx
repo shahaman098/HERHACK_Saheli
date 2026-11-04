@@ -4,16 +4,43 @@
 // Supabase Realtime is the production path, documented in README).
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EventTimeline } from "@/components/EventTimeline";
 import type { Incident } from "@/lib/types";
 
 const POLL_MS = 2000;
 
+/** Short urgency tone via WebAudio — no audio assets needed. */
+function playAlertTone(times = 3): void {
+  try {
+    const ctx = new AudioContext();
+    for (let i = 0; i < times; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      const start = ctx.currentTime + i * 0.45;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.4, start + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.4);
+    }
+    setTimeout(() => void ctx.close(), times * 450 + 500);
+  } catch {
+    /* audio unavailable — visual alarm still works */
+  }
+}
+
 export default function GuardianPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [now, setNow] = useState<number>(Date.now());
   const [connected, setConnected] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
+  const soundOnRef = useRef(soundOn);
+  soundOnRef.current = soundOn;
+  const lastEscalatedIdRef = useRef<string | null>(null);
 
   const poll = useCallback(async () => {
     try {
@@ -22,6 +49,17 @@ export default function GuardianPage() {
       setIncidents(data.incidents);
       setNow(data.now);
       setConnected(true);
+
+      // Audible alarm on a NEW escalation (never re-alarm the same incident).
+      const escalated = data.incidents.find((i) => i.status === "escalated");
+      if (
+        escalated &&
+        escalated.id !== lastEscalatedIdRef.current &&
+        soundOnRef.current
+      ) {
+        playAlertTone();
+      }
+      lastEscalatedIdRef.current = escalated?.id ?? null;
     } catch {
       setConnected(false);
     }
@@ -46,11 +84,26 @@ export default function GuardianPage() {
         <Link href="/" className="text-lg font-semibold tracking-tight">
           Saheli
         </Link>
-        <span className="flex items-center gap-2 text-sm text-white/50">
-          <span
-            className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-400" : "bg-red-400"}`}
-          />
-          {connected ? "Live" : "Reconnecting…"} · I protect someone
+        <span className="flex items-center gap-3 text-sm text-white/50">
+          <button
+            onClick={() => {
+              setSoundOn((s) => !s);
+              if (!soundOn) playAlertTone(1); // user gesture unlocks WebAudio
+            }}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              soundOn
+                ? "bg-emerald-400/15 text-emerald-200"
+                : "bg-white/10 text-white/60 hover:bg-white/15"
+            }`}
+          >
+            {soundOn ? "🔔 Alarm sound ON" : "🔕 Alarm sound OFF"}
+          </button>
+          <span className="flex items-center gap-2">
+            <span
+              className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-400" : "bg-red-400"}`}
+            />
+            {connected ? "Live" : "Reconnecting…"} · I protect someone
+          </span>
         </span>
       </header>
 
@@ -168,9 +221,11 @@ function IncidentCard({ incident, now }: { incident: Incident; now: number }) {
               </p>
               <a
                 className="inline-block rounded-lg bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/15"
-                href={`tel:`}
+                target="_blank"
+                rel="noreferrer"
+                href={`https://www.google.com/maps?q=${incident.lastLocation.lat},${incident.lastLocation.lng}`}
               >
-                📞 Call them
+                🧭 Turn-by-turn to their location
               </a>
             </>
           ) : (
