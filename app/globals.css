@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+/* Saheli palette: deep plum for calm, amber/red reserved for escalation. */
+body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(168, 85, 247, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(236, 72, 153, 0.12), transparent 55%),
+    #140b26;
+}
