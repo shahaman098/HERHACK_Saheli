@@ -10,6 +10,10 @@ function sha256(input: string): string {
   return createHash("sha256").update(input).digest("hex");
 }
 
+function sha256Base64Payload(base64: string): string {
+  return createHash("sha256").update(Buffer.from(base64, "base64")).digest("hex");
+}
+
 /**
  * GET the tamper-evident evidence manifest for an incident.
  *
@@ -33,7 +37,7 @@ export async function GET(_request: Request, { params }: Params) {
   incident.audio.forEach((chunk, index) => {
     if (chunk.seq !== index) valid = false;
     if (chunk.prevHash !== head) valid = false;
-    if (sha256(chunk.data) !== chunk.hash) valid = false;
+    if (sha256Base64Payload(chunk.data) !== chunk.hash) valid = false;
     head = sha256(`${head}${chunk.hash}`);
   });
   if (incident.chainHead !== head) valid = false;

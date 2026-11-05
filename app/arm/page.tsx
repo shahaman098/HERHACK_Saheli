@@ -53,20 +53,25 @@ export default function ArmPage() {
   const onChunk = useCallback(async (chunk: RecorderChunk) => {
     const id = incidentIdRef.current;
     if (!id) return;
-    await fetch(`/api/incidents/${id}/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "audio_chunk",
-        data: {
-          seq: chunk.seq,
-          ts: chunk.ts,
-          mime: chunk.mime,
-          data: chunk.base64,
-          hash: chunk.hash,
-        },
-      }),
-    }).catch(() => undefined);
+    const post = (seq: number) =>
+      fetch(`/api/incidents/${id}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "audio_chunk",
+          data: { seq, ts: chunk.ts, mime: chunk.mime, data: chunk.base64, hash: chunk.hash },
+        }),
+      }).catch(() => undefined);
+    let res = await post(chunk.seq);
+    // If the server's chain expects a different sequence (e.g. a rejected chunk
+    // shifted the head), resync once to the server's authoritative seq.
+    if (res && res.status === 409) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      const match = body?.error?.match(/expected seq (\d+)/);
+      if (match) {
+        await post(Number(match[1]));
+      }
+    }
   }, []);
 
   const recorder = useRecorder(onChunk);

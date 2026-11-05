@@ -14,6 +14,12 @@ export function sha256(input: string): string {
   return createHash("sha256").update(input).digest("hex");
 }
 
+/** Hash raw bytes — the client hashes the ArrayBuffer before base64-encoding,
+ * so byte-level verification must decode before hashing. */
+export function sha256Bytes(input: Buffer): string {
+  return createHash("sha256").update(input).digest("hex");
+}
+
 /** Advance every incident whose verify window elapsed without confirmation. */
 export function sweepDeadlines(): void {
   const now = Date.now();
@@ -54,8 +60,10 @@ export function appendAudioChunk(
   if (chunk.seq !== expectedSeq) {
     return { ok: false, error: `expected seq ${expectedSeq}, got ${chunk.seq}` };
   }
-  // Server re-verifies the client hash — the client cannot mint a false hash.
-  if (sha256(chunk.data) !== chunk.hash) {
+  // Server re-verifies the client hash over the RAW bytes — the client cannot
+  // mint a false hash, and base64-transport differences cannot fake one either.
+  const raw = Buffer.from(chunk.data, "base64");
+  if (sha256Bytes(raw) !== chunk.hash) {
     return { ok: false, error: "chunk hash mismatch" };
   }
   const prevHash = incident.chainHead;

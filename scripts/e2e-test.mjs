@@ -41,15 +41,18 @@ assert(incident.status === "verifying", "status = verifying");
 assert(incident.chainHead === "SAHELI_GENESIS", "chain head starts at genesis");
 
 // --- 2. chain audio chunks ---------------------------------------------------
+// NOTE: the hash is over the DECODED bytes (matching the real client, which
+// hashes the raw ArrayBuffer before base64-encoding it).
 const chunkText = (i) => Buffer.from(`fake-audio-payload-${i}`).toString("base64");
 for (const seq of [0, 1]) {
   const data = chunkText(seq);
+  const rawHash = sha256(Buffer.from(data, "base64"));
   res = await fetch(`${BASE}/api/incidents/${incident.id}/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       kind: "audio_chunk",
-      data: { seq, ts: Date.now(), mime: "audio/webm", data, hash: sha256(data) },
+      data: { seq, ts: Date.now(), mime: "audio/webm", data, hash: rawHash },
     }),
   });
   assert(res.status === 200, `audio chunk #${seq} accepted & chained`);
