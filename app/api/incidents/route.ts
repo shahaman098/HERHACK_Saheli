@@ -25,8 +25,9 @@ export async function POST(request: Request) {
     location,
   });
 
+  // `now` lets the client align the check-in countdown with the server clock.
   return NextResponse.json(
-    { incident: serializeIncident(incident) },
+    { incident: serializeIncident(incident), now: Date.now() },
     { status: 201 },
   );
 }
